@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEX=main.tex
+MAINBASE=main
 DIFFBASE=diff
 
 if [[ ! -d ".git" ]]; then
@@ -9,50 +9,50 @@ if [[ ! -d ".git" ]]; then
 fi
 
 ROOT=`pwd`
-REPO=${ROOT}/.git
+REPO=$ROOT/.git
 PROG=`basename $0`
-TMP=`mktemp -d -t ${PROG}` || exit 2
-echo compiling diff in $ROOT
+TMP=`mktemp -d -t $PROG` || exit 2
 
 OLD=$TMP/old
 NEW=$TMP/new
+MAIN=$MAINBASE.tex
 DIFF=$DIFFBASE.tex
 AUX=$DIFFBASE.aux
 PDF=$DIFFBASE.pdf
 
+OLDREF=$1
+NEWREF=$2
+
 LD_OPTS="--flatten"
 SAFEFILE=$ROOT/.append-safecmd
 if [[ -e "$SAFEFILE" ]]; then
-    LD_OPTS="--append-safecmd=$SAFECMD $LD_OPTS"
+    LD_OPTS="--append-safecmd=\"$SAFEFILE\" $LD_OPTS"
 fi
 
 GIT="git"
-LATEXDIFF="echo latexdiff"
-PDFLATEX="pdflatex"
+LATEXDIFF="latexdiff"
+LATEX="pdflatex"
 BIBTEX="bibtex"
 CD="cd"
 MV="mv"
 OPEN="open"
 
-$GIT clone $1/.git $OLD
-$GIT clone $1/.git $NEW
+$GIT clone $REPO $OLD
+$GIT clone $REPO $NEW
 
-$CD $OLD;
-$GIT checkout $2
+$CD $OLD; $GIT checkout $OLDREF > /dev/null 2>&1
+$CD $NEW; $GIT checkout $NEWREF > /dev/null 2>&1
 
-$CD $NEW;
-$GIT checkout $3
-
-$CD $ROOT;
-$LATEXDIFF --append-safecmd=$ROOT/$SAFE --flatten $OLD/$TEX $NEW/$TEX > $NEW/$DIFF
+$CD $TMP; 
+$LATEXDIFF $LD_OPTS $OLD/$MAIN $NEW/$MAIN > $NEW/$DIFF
 
 $CD $NEW;
-$PDFLATEX -interaction batchmode $DIFF
+$LATEX -interaction batchmode $DIFF
 $BIBTEX -terse $AUX
-$PDFLATEX -interaction batchmode $DIFF
-$PDFLATEX -interaction batchmode $DIFF
+$LATEX -interaction batchmode $DIFF
+$LATEX -interaction batchmode $DIFF
 
-$CD $ROOT;
-$MV $NEW/$PDF .;
+FINALPDF=$ROOT/$DIFFBASE-$OLDREF-$NEWREF.pdf
+$MV $NEW/$PDF "$FINALPDF";
 
-$OPEN $PDF -a /Applications/Skim.app
+echo diff saved as "$FINALPDF"
