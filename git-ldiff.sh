@@ -1,36 +1,39 @@
 #!/bin/bash
 
+TEX=main.tex
+DIFFBASE=diff
+
 if [[ ! -d ".git" ]]; then
     echo please run from the root of your document repository
     exit 1
 fi
 
 ROOT=`pwd`
-REPO="$ROOT/.git"
+REPO=${ROOT}/.git
 PROG=`basename $0`
-TMP=`mktemp -d -t ${PROG}XXXXXX` || exit 2
-echo compiling to $TMP
+TMP=`mktemp -d -t ${PROG}` || exit 2
+echo compiling diff in $ROOT
 
-exit 0
+OLD=$TMP/old
+NEW=$TMP/new
+DIFF=$DIFFBASE.tex
+AUX=$DIFFBASE.aux
+PDF=$DIFFBASE.pdf
 
-OLD=$ROOT/old
-NEW=$ROOT/new
-TEX=main.tex
-DIFF=diff.tex
-AUX=diff.aux
-PDF=diff.pdf
-SAFE=.append-safecmd
+LD_OPTS="--flatten"
+SAFEFILE=$ROOT/.append-safecmd
+if [[ -e "$SAFEFILE" ]]; then
+    LD_OPTS="--append-safecmd=$SAFECMD $LD_OPTS"
+fi
 
-MAKE="make"
 GIT="git"
-LATEXDIFF="latexdiff"
+LATEXDIFF="echo latexdiff"
 PDFLATEX="pdflatex"
 BIBTEX="bibtex"
 CD="cd"
 MV="mv"
 OPEN="open"
 
-$MAKE clean
 $GIT clone $1/.git $OLD
 $GIT clone $1/.git $NEW
 
