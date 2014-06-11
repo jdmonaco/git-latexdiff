@@ -48,9 +48,11 @@ $LATEXDIFF $LD_OPTS $OLD/$MAIN $NEW/$MAIN > $NEW/$DIFF
 
 $CD $NEW;
 $LATEX -interaction batchmode $DIFF
-$BIBTEX -terse $AUX
-$LATEX -interaction batchmode $DIFF
-$LATEX -interaction batchmode $DIFF
+if [[ ! -z `cat *.aux */*.aux 2>&1 /dev/null | grep citation` ]]; then
+    $BIBTEX -terse $AUX
+    $LATEX -interaction batchmode $DIFF
+    $LATEX -interaction batchmode $DIFF
+fi
 
 FINALPDF=$ROOT/$DIFFBASE-$OLDREF-$NEWREF.pdf
 $MV $NEW/$PDF "$FINALPDF";
