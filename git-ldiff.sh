@@ -1,5 +1,23 @@
 #!/bin/bash
+#
+# A simple bash script for creating LaTeX diffs from git revisions
+#
+# Usage: git-ldiff.sh OLD_REF NEW_REF 
+#
+# Notes: 1) Latexdiff is required, preferably version 1.0.1+ so that 
+# included files are handled correctly. 2) The script will pick up on 
+# a .append-safecmd file in the main document folder to use for the 
+# --append-safecmd option of latexdiff. 
+#
+# Author: Joe Monaco <jmonaco@jhu.edu> 
+# Last updated: June 11, 2014.
+#
+# This work is licensed under the Creative Commons Attribution 4.0
+# International License. To view a copy of this license, visit
+# http://creativecommons.org/licenses/by/4.0/.
+#
 
+# Set base names of main input (.tex) file and the output (.pdf) file
 MAINBASE=main
 DIFFBASE=diff
 
@@ -35,7 +53,6 @@ LATEX="pdflatex"
 BIBTEX="bibtex"
 CD="cd"
 MV="mv"
-OPEN="open"
 
 $GIT clone $REPO $OLD
 $GIT clone $REPO $NEW
