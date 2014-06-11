@@ -6,7 +6,7 @@ This is *yet another* wrapper script for compiling diff files between git revisi
 others which are more complicated and do all sorts of testing and checking. This one does not do much of that. It
 checks out the two commit/branch refs that you specify on the command line into temporary folders, runs `latexdiff
 --flatten` on them (as well as `--append-safecmd=$ROOT/.append-safecmd` if you have `.append-safecmd` in your root
-document folder that you're running git-ldiff.sh from). 
+document folder that you're running git-ldiff.sh from), compiles the diff, and moves the resulting pdf file back into the root document folder. 
 
     Usage: git-ldiff.sh OLD_REF NEW_REF 
 
