@@ -17,7 +17,7 @@
 # http://creativecommons.org/licenses/by/4.0/.
 #
 
-# Set base names of main input (.tex) file and the output (.pdf) file
+# Set default base names of input (.tex) and diff output (.pdf) files
 MAINBASE=main
 DIFFBASE=diff
 
@@ -31,6 +31,17 @@ REPO=$ROOT/.git
 PROG=`basename $0`
 TMP=`mktemp -d -t $PROG` || exit 2
 
+if [[ $# -eq 3 ]]; then
+    MAINBASE=$1
+    OLDREF=$2
+    NEWREF=$3
+elif [[ $# -eq 2 ]]; then
+    OLDREF=$1
+    NEWREF=$2
+else
+    echo "Usage: $PROG [main_base] old_ref new_ref" && exit 1
+fi
+
 OLD=$TMP/old
 NEW=$TMP/new
 MAIN=$MAINBASE.tex
@@ -38,10 +49,11 @@ DIFF=$DIFFBASE.tex
 AUX=$DIFFBASE.aux
 PDF=$DIFFBASE.pdf
 
-OLDREF=$1
-NEWREF=$2
+LD_OPTS=""
+if [[ ! -z `grep -Ewe '\\\(include|input)' $MAIN` ]]; then
+    LD_OPTS="--flatten $LD_OPTS"
+fi
 
-LD_OPTS="--flatten"
 SAFEFILE=$ROOT/.append-safecmd
 if [[ -e "$SAFEFILE" ]]; then
     LD_OPTS="--append-safecmd=\"$SAFEFILE\" $LD_OPTS"
