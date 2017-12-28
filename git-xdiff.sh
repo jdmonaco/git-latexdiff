@@ -60,27 +60,34 @@ if [[ -e "$SAFEFILE" ]]; then
 fi
 
 GIT="git"
-LATEXDIFF="latexdiff"
-LATEX="xelatex"
-BIBTEX="bibtex"
+LATEXDIFF="/usr/local/bin/latexdiff"
+LATEX="xelatex -interaction batchmode"
+BIBTEX="bibtex -terse"
 CD="cd"
 MV="mv"
 
 $GIT clone $REPO $OLD
 $GIT clone $REPO $NEW
 
-$CD $OLD; $GIT checkout $OLDREF > /dev/null 2>&1
-$CD $NEW; $GIT checkout $NEWREF > /dev/null 2>&1
+$CD $OLD
+$GIT checkout $OLDREF > /dev/null 2>&1
+$LATEX $MAIN > /dev/null 2>&1
+$BIBTEX $MAINBASE
 
-$CD $TMP; 
-$LATEXDIFF $LD_OPTS $OLD/$MAIN $NEW/$MAIN > $NEW/$DIFF
+$CD $NEW
+$GIT checkout $NEWREF > /dev/null 2>&1
+$LATEX $MAIN > /dev/null 2>&1
+$BIBTEX $MAINBASE
+
+$CD $TMP
+$LATEXDIFF $LD_OPTS $OLD/$MAIN $NEW/$MAIN > $NEW/$DIFF || echo "Something went wrong..." && exit 1
 
 $CD $NEW;
-$LATEX -interaction batchmode $DIFF
+$LATEX $DIFF
 if [[ ! -z `cat *.aux */*.aux 2>&1 /dev/null | grep citation` ]]; then
-    $BIBTEX -terse $AUX
-    $LATEX -interaction batchmode $DIFF
-    $LATEX -interaction batchmode $DIFF
+    $BIBTEX $AUX
+    $LATEX $DIFF
+    $LATEX $DIFF
 fi
 
 FINALPDF=$ROOT/$DIFFBASE-$OLDREF-$NEWREF.pdf
