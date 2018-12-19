@@ -1,18 +1,39 @@
-## git-ldiff.sh
+## git-latexdiff.sh
 
-### Simple bash script for creating LaTeX diffs from git revisions
+This wrapper script attempts to compile 'tracked changes' files between git
+commits (or between a commit and the current working copy) of a LaTeX document.
+This script does not do much testing or verification; it assumes that the
+commits (or working copy) provide compilable documents that `latexdiff`
+([CTAN](http://www.ctan.org/tex-archive/support/latexdiff/)) can handle.
+It checks out the commits/branches/tags that you specify into temporary
+folders, runs `latexdiff` on them, compiles the result, and moves the diff'd
+PDF back to the document's directory. To install, create a symbolic link to
+`git-latexdiff.sh` called `git-ldiff` (or whatever you prefer) somewhere on your
+`$PATH`.
 
-This is *yet another* wrapper script for compiling diff files between git revisions of a LaTeX document. There are
-others which are more complicated and do all sorts of testing and checking. This one does not do much of that. It
-checks out the two commit/branch refs that you specify on the command line into temporary folders, runs `latexdiff` on
-them, compiles the diff, and moves the resulting pdf file back into the root document folder.
+    Usage: git-ldiff [-m <name>] [-x] [-o <opts>] [-b] <base> [-r <revision>]
 
-    Usage: git-ldiff.sh [main_base] old_ref new_ref 
+    Arguments:
+    -m,--main       main document name (default, 'main')
+    -x,--xelatex    use xelatex instead of pdflatex
+    -o,--options    addtional latexdiff arguments (--flatten is handled)
+    -b,--base       git commit reference for comparison point
+    -r,--revision   revision commit (default, working copy)
 
-You can optionally provide the basename of the main `.tex` file, which defaults to `main`. The old and new references can be any of the usual assortment of tags, hashes, and branches that are accepted by `git checkout`. 
+    Only the <base> commit reference is required.
 
-Some notes:
+The base and revision values can be git references of any sort (tags, branches,
+commit hashes, etc.) that are accepted by `git checkout`.
 
-- The script passes the option `--append-safecmd=$ROOT/.append-safecmd` if you have a file called `.append-safecmd` in your root document folder; see `man latexdiff` for more about safe commands
-- If you have `\include` or `\input` commands to bring in other files, the script will use `latexdiff --flatten`, meaning that you will also need a recent `latexdiff` (1.0.1+, which you can get [at CTAN](http://www.ctan.org/tex-archive/support/latexdiff/)).
+Notes:
+
+- The script passes the option `--append-safecmd=$ROOT/.append-safecmd` if you
+have a file called `.append-safecmd` in the document's directory; see `man
+latexdiff` for more about safe commands.
+- It will similarly pass `--append-textcmd=$ROOT/.append-textcmd` if there is a
+`.append-textcmd` file.
+- If you have `\include` or `\input` commands to bring in
+other files, the script will use the `--flatten` option,
+meaning that you will also need `latexdiff` version 1.0.1+
+([CTAN](http://www.ctan.org/tex-archive/support/latexdiff/)).
 

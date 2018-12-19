@@ -2,17 +2,19 @@
 #
 # Create LaTeX diffs from git revisions
 #
-# Notes: (1) Latexdiff is required, preferably version 1.0.1+ so that included
-# files are handled correctly. (2) The script will pick up on .append-safecmd
-# and .text-safecmd files in the main document folder to use for the
-# corresponding latexdiff options.
+# Requires: latexdiff, pdflatex (or xelatex), git, and rsync (for working copy
+# diffs).
 #
-# Author: Joseph Monaco <jmonaco@jhu.edu>
-# Last updated: December 18, 2018.
+# Notes: (1) Latexdiff is required, preferably version 1.0.1+ so that
+# included files are handled correctly. (2) The script will pick up on
+# .append-safecmd and .text-safecmd files in the main document folder to use for
+# the corresponding latexdiff options.
+#
+# Author: Joseph Monaco <jmonaco@jhu.edu> Last updated: December 18, 2018.
 #
 
-set -xue
-NAME=`basename ${0}`
+set -ue
+NAME=$(basename "$0")
 
 function usage {
 cat <<USAGE
@@ -30,12 +32,14 @@ USAGE
 }
 
 # Assert latexdiff on path and running from repo root
-[[ -z $(which latexdiff) ]] && echo "Requires latexdiff." && exit 1
-[[ -z $(which git) ]] && echo "Requires git." && exit 2
+[[ -z $(which "latexdiff") ]] && echo "Requires latexdiff." && exit 1
+[[ -z $(which "git") ]] && echo "Requires git." && exit 2
 [[ ! -d ".git" ]] && echo "Run from repository root." && exit 3
 
 MAIN="main"
 LATEX="pdflatex"
+LTXARGS="-batchmode interaction"
+BTXARGS="-terse"
 LDARGS=""
 BASEREF=""
 REVREF="WC"
@@ -69,74 +73,77 @@ done
 [[ -z "$BASEREF" ]] && usage && exit 0
 
 # Assert *latex and rsync (if needed) are on path
-[[ -z $(which $LATEX) ]] && echo "Unable to find $LATEX." && exit 4
-[[ "$REVREF" = "WC" ]] && [[ -z $(which rsync) ]] && \
+[[ -z $(which "$LATEX") ]] && echo "Unable to find $LATEX." && exit 4
+[[ "$REVREF" = "WC" ]] && [[ -z $(which "rsync") ]] && \
     echo "Working copy diff requires rsync." && exit 5
 
 # Apply --flatten if documents uses \include or \input
-if [[ -n $(grep -Ewe '\\(include|input)' ${MAIN}.tex) ]]; then
+if [[ -n $(grep -Ewe '\\(include|input)' $MAIN.tex) ]]; then
     LDARGS="--flatten $LDARGS"
 fi
 
 # Add file of safe commands that can be annotated
 ROOT=$(pwd)
-SAFECMD="${ROOT}/.append-safecmd"
-if [[ -f "${SAFECMD}" ]]; then
-    LDARGS="--append-safecmd=\"${SAFECMD}\" $LDARGS"
+SAFECMD="$ROOT/.append-safecmd"
+if [[ -f "$SAFECMD" ]]; then
+    LDARGS="--append-safecmd=\"$SAFECMD\" $LDARGS"
 fi
 
 # Add file of text commands whose last argument should be processed
-TEXTCMD="${ROOT}/.append-textcmd"
-if [[ -f "${TEXTCMD}" ]]; then
-    LDARGS="--append-textcmd=\"${TEXTCMD}\" $LDARGS"
+TEXTCMD="$ROOT/.append-textcmd"
+if [[ -f "$TEXTCMD" ]]; then
+    LDARGS="--append-textcmd=\"$TEXTCMD\" $LDARGS"
 fi
 
 # Make the temporary directories
-TMP=`mktemp -d -t ${NAME}`
-BASE="${TMP}/old"
-REV="${TMP}/new"
+TMP=$(mktemp -d -t "$NAME")
+BASE="$TMP/old"
+REV="$TMP/new"
 
 # Checkout base commit
-echo "Cloning base commit..."
-echo " -> ${BASE}"
-(  git clone "${ROOT}/.git" "${BASE}"
-   cd "${BASE}"
+echo "Cloning base commit ("$BASE")..."
+echo " -> $BASE"
+(  git clone "$ROOT/.git" "$BASE"
+   cd "$BASE"
    git checkout "$BASEREF" ) > /dev/null 2>&1
 
 # Checkout revised commit (or rsync working copy)
 if [[ "$REVREF" = "WC" ]]; then
     echo "Copying working copy..."
-    echo " -> ${REV}"
-    mkdir -p "${REV}" && \
-        rsync -avhi --exclude=".git*" "${ROOT}/" "${REV}" > /dev/null 2>&1
+    echo " -> $REV"
+    mkdir -p "$REV" && \
+        rsync -avhi --exclude=".git*" "$ROOT/" "$REV" > /dev/null 2>&1
 else
     echo "Cloning revision commit..."
-    echo " -> ${REV}"
-    ( git clone "${ROOT}/.git" "$REV"
-      cd "${REV}"
-      git checkout "$REVREF" ) > /dev/null 2>&1
+    echo " -> $REV"
+    (
+    git clone "$ROOT/.git" "$REV"
+    cd "$REV"
+    git checkout "$REVREF"
+    ) > /dev/null 2>&1
 fi
 
 echo "Running latexdiff..."
 (
-cd "$TMP";
-latexdiff $LDARGS "${BASE}/${MAIN}.tex" "${REV}/${MAIN}.tex" > "${REV}/diff.tex"
+cd "$TMP"
+latexdiff $LDARGS "$BASE/$MAIN.tex" "$REV/$MAIN.tex" > "$REV/diff.tex"
 ) > /dev/null 2>&1
 
 echo "Compiling the diff..."
 (
 cd "$REV";
-$LATEX -interaction batchmode diff.tex
-if [[ -n $(cat *.aux */*.aux 2>/dev/null | grep citation) ]]; then
-    bibtex -terse diff.aux
-    $LATEX -interaction batchmode diff.tex
+$LATEX "$LTXARGS" diff.tex
+if [[ -n "$(cat *.aux */*.aux 2>/dev/null | grep 'citation')" ]]; then
+    bibtex "$BTXARGS" diff.aux
+    $LATEX "$LTXARGS" diff.tex
 fi
-$LATEX -interaction batchmode diff.tex
+$LATEX "$LTXARGS" diff.tex
 ) > /dev/null 2>&1
 
 # Export diff pdf to the original document directory
-DESTPDF="${ROOT}/diff-${BASEREF}-${REVREF}.pdf"
-mv "${REV}/diff.pdf" "${DESTPDF}" && \
-    echo "Diff saved to:" && echo " -> ${DESTPDF}" && \
-        open "${DESTPDF}" && \
-            rm -rf "${TMP}" > /dev/null 2>&1
+DESTPDF="$ROOT/diff-$BASEREF-$REVREF.pdf"
+mv "$REV/diff.pdf" "$DESTPDF" && \
+    echo "Diff saved to:" && echo " -> $DESTPDF"
+
+[[ $(which "open") ]] && open "$DESTPDF"
+rm -rf "$TMP" > /dev/null 2>&1
