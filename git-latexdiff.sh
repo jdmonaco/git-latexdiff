@@ -38,7 +38,7 @@ USAGE
 
 MAIN="main"
 LATEX="pdflatex"
-LTXARGS="-batchmode interaction"
+LTXARGS="-nonstopmode interaction"
 BTXARGS="-terse"
 LDARGS=""
 BASEREF=""
@@ -138,12 +138,20 @@ if [[ -n "$(cat *.aux */*.aux 2>/dev/null | grep 'citation')" ]]; then
     $LATEX "$LTXARGS" diff.tex
 fi
 $LATEX "$LTXARGS" diff.tex
+$LATEX "$LTXARGS" diff.tex
 ) > /dev/null 2>&1
 
-# Export diff pdf to the original document directory
-DESTPDF="$ROOT/diff-$BASEREF-$REVREF.pdf"
-mv "$REV/diff.pdf" "$DESTPDF" && \
-    echo "Diff saved to:" && echo " -> $DESTPDF"
+if [[ -e "$REV/diff.pdf" ]] && [[ -s "$REV/diff.pdf" ]]; then
 
-[[ $(which "open") ]] && open "$DESTPDF"
-rm -rf "$TMP" > /dev/null 2>&1
+    # Export diff pdf to the original document directory
+    DESTPDF="$ROOT/diff-$BASEREF-$REVREF.pdf"
+    mv "$REV/diff.pdf" "$DESTPDF" && \
+        echo "Diff saved to:" && echo " -> $DESTPDF"
+
+    [[ $(which "open") ]] && open "$DESTPDF"
+    rm -rf "$TMP" > /dev/null 2>&1
+
+else
+    echo 'Something went wrong! PDF file not produced.'
+    exit 6
+fi
