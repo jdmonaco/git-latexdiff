@@ -38,7 +38,7 @@ USAGE
 
 MAIN="main"
 LATEX="pdflatex"
-LTXARGS="-nonstopmode interaction"
+LTXARGS="-interaction=nonstopmode"
 BTXARGS="-terse"
 LDARGS=""
 BASEREF=""
