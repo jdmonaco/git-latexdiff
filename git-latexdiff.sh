@@ -50,19 +50,19 @@ while (( $# )); do
         usage && exit 0
     elif [[ "$1" = "-m" ]] || [[ "$1" = "--main" ]]; then
         MAIN="$2"
-        shift; shift
+        shift 2
     elif [[ "$1" = "-x" ]] || [[ "$1" = "--xelatex" ]]; then
         LATEX="xelatex"
         shift
     elif [[ "$1" = "-o" ]] || [[ "$1" = "--options" ]]; then
         LDARGS="$2"
-        shift; shift
+        shift 2
     elif [[ "$1" = "-b" ]] || [[ "$1" = "--base" ]]; then
         BASEREF="$2"
-        shift; shift
+        shift 2
     elif [[ "$1" = "-r" ]] || [[ "$1" = "--revised" ]]; then
         REVREF="$2"
-        shift; shift
+        shift 2
     else
         BASEREF="$1"
         shift
