@@ -40,7 +40,7 @@ MAIN="main"
 LATEX="pdflatex"
 LTXARGS="-interaction=nonstopmode"
 BTXARGS="-terse"
-LDARGS=""
+LDARGS="--type=CFONT --disable-citation-markup"
 BASEREF=""
 REVREF="WC"
 
@@ -103,9 +103,20 @@ REV="$TMP/new"
 # Checkout base commit
 echo "Cloning base commit ("$BASE")..."
 echo " -> $BASE"
-(  git clone "$ROOT/.git" "$BASE"
-   cd "$BASE"
-   git checkout "$BASEREF" ) > /dev/null 2>&1
+(
+git clone "$ROOT/.git" "$BASE"
+cd "$BASE"
+git checkout "$BASEREF"
+) > /dev/null 2>&1
+
+# Compile bibtex for bbl file in base
+echo "Compiling base bibtex..."
+echo " -> $BASE/$MAIN.bbl"
+(
+cd "$BASE"
+$LATEX "$LTXARGS" $MAIN.tex
+bibtex "$BTXARGS" $MAIN
+) > /dev/null 2>&1
 
 # Checkout revised commit (or rsync working copy)
 if [[ "$REVREF" = "WC" ]]; then
@@ -123,20 +134,31 @@ else
     ) > /dev/null 2>&1
 fi
 
-echo "Running latexdiff..."
+# Compile bibtex for bbl file in revision
+echo "Compiling revision bibtex..."
+echo " -> $REV/$MAIN.bbl"
+(
+cd "$REV"
+$LATEX "$LTXARGS" $MAIN.tex
+bibtex "$BTXARGS" $MAIN
+) > /dev/null 2>&1
+
+echo "Running latexdiff (tex)..."
 (
 cd "$TMP"
 latexdiff $LDARGS "$BASE/$MAIN.tex" "$REV/$MAIN.tex" > "$REV/diff.tex"
+) > /dev/null 2>&1
+
+echo "Running latexdiff (bbl)..."
+(
+cd "$TMP"
+latexdiff $LDARGS "$BASE/$MAIN.bbl" "$REV/$MAIN.bbl" > "$REV/diff.bbl"
 ) > /dev/null 2>&1
 
 echo "Compiling the diff..."
 (
 cd "$REV";
 $LATEX "$LTXARGS" diff.tex
-if [[ -n "$(cat *.aux */*.aux 2>/dev/null | grep 'citation')" ]]; then
-    bibtex "$BTXARGS" diff.aux
-    $LATEX "$LTXARGS" diff.tex
-fi
 $LATEX "$LTXARGS" diff.tex
 $LATEX "$LTXARGS" diff.tex
 ) > /dev/null 2>&1
