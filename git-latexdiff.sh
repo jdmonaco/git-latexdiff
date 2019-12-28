@@ -10,7 +10,7 @@
 # .append-safecmd and .text-safecmd files in the main document folder to use for
 # the corresponding latexdiff options.
 #
-# Author: Joseph Monaco <jmonaco@jhu.edu> Last updated: December 18, 2018.
+# Author: Joseph Monaco <jmonaco@jhu.edu> Last updated: December 28, 2019.
 #
 
 set -ue
