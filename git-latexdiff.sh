@@ -40,7 +40,7 @@ MAIN="main"
 LATEX="pdflatex"
 LTXARGS="-interaction=nonstopmode"
 BTXARGS="-terse"
-LDARGS="--type=CFONT --disable-citation-markup"
+LDARGS="--type=CFONT --floattype=FLOATSAFE --disable-citation-markup"
 BASEREF=""
 REVREF="WC"
 
@@ -55,7 +55,7 @@ while (( $# )); do
         LATEX="xelatex"
         shift
     elif [[ "$1" = "-o" ]] || [[ "$1" = "--options" ]]; then
-        LDARGS="$2"
+        LDARGS="$LDARGS $2"
         shift 2
     elif [[ "$1" = "-b" ]] || [[ "$1" = "--base" ]]; then
         BASEREF="$2"
@@ -86,12 +86,14 @@ fi
 ROOT=$(pwd)
 SAFECMD="$ROOT/.append-safecmd"
 if [[ -f "$SAFECMD" ]]; then
+    echo "Found $SAFECMD"
     LDARGS="--append-safecmd=\"$SAFECMD\" $LDARGS"
 fi
 
 # Add file of text commands whose last argument should be processed
 TEXTCMD="$ROOT/.append-textcmd"
 if [[ -f "$TEXTCMD" ]]; then
+    echo "Found $TEXTCMD"
     LDARGS="--append-textcmd=\"$TEXTCMD\" $LDARGS"
 fi
 
