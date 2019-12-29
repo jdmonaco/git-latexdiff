@@ -172,6 +172,11 @@ if [[ -e "$REV/diff.pdf" ]] && [[ -s "$REV/diff.pdf" ]]; then
     mv "$REV/diff.pdf" "$DESTPDF" && \
         echo "Diff saved to:" && echo " -> $DESTPDF"
 
+    # Export diff aux file also, which could contain useful references
+    DESTAUX="$ROOT/diff.aux"
+    mv "$REV/diff.aux" "$DESTAUX" && \
+        echo "Aux saved to:" && echo " -> $DESTAUX"
+
     [[ $(which "open") ]] && open "$DESTPDF"
     rm -rf "$TMP" > /dev/null 2>&1
 
