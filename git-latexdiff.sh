@@ -111,14 +111,18 @@ cd "$BASE"
 git checkout "$BASEREF"
 ) > /dev/null 2>&1
 
-# Compile bibtex for bbl file in base
-echo "Compiling base bibtex..."
-echo " -> $BASE/$MAIN.bbl"
-(
-cd "$BASE"
-$LATEX "$LTXARGS" $MAIN.tex
-bibtex "$BTXARGS" $MAIN
-) > /dev/null 2>&1
+# Compile bibtex for bbl file in base if necessary
+if grep '^\w*\\begin{thebibliography}' "$BASE/$MAIN.tex" > /dev/null 2>&1; then
+    echo "Found embedded bibliography..."
+elif grep '^\w*\\bibliography{' "$BASE/$MAIN.tex" > /dev/null 2>&1; then
+    echo "Compiling base bibtex..."
+    echo " -> $BASE/$MAIN.bbl"
+    (
+    cd "$BASE"
+    $LATEX "$LTXARGS" $MAIN.tex
+    bibtex "$BTXARGS" $MAIN
+    ) > /dev/null
+fi
 
 # Checkout revised commit (or rsync working copy)
 if [[ "$REVREF" = "WC" ]]; then
@@ -136,26 +140,32 @@ else
     ) > /dev/null 2>&1
 fi
 
-# Compile bibtex for bbl file in revision
-echo "Compiling revision bibtex..."
-echo " -> $REV/$MAIN.bbl"
-(
-cd "$REV"
-$LATEX "$LTXARGS" $MAIN.tex
-bibtex "$BTXARGS" $MAIN
-) > /dev/null 2>&1
+# Compile bibtex for bbl file in revision if necessary
+if grep '^\w*\\begin{thebibliography}' "$REV/$MAIN.tex" > /dev/null 2>&1; then
+    echo "Found embedded bibliography..."
+elif grep '^\w*\\bibliography{' "$REV/$MAIN.tex" > /dev/null 2>&1; then
+    echo "Compiling revision bibtex..."
+    echo " -> $REV/$MAIN.bbl"
+    (
+    cd "$REV"
+    $LATEX "$LTXARGS" $MAIN.tex
+    bibtex "$BTXARGS" $MAIN
+    ) > /dev/null
+fi
 
 echo "Running latexdiff (tex)..."
 (
 cd "$TMP"
 latexdiff $LDARGS "$BASE/$MAIN.tex" "$REV/$MAIN.tex" > "$REV/diff.tex"
-) > /dev/null 2>&1
+) > /dev/null
 
-echo "Running latexdiff (bbl)..."
-(
-cd "$TMP"
-latexdiff $LDARGS "$BASE/$MAIN.bbl" "$REV/$MAIN.bbl" > "$REV/diff.bbl"
-) > /dev/null 2>&1
+if [[ -f "$BASE/$MAIN.bbl" ]] && [[ -f "$REV/$MAIN.bbl" ]]; then
+    echo "Running latexdiff (bbl)..."
+    (
+    cd "$TMP"
+    latexdiff $LDARGS "$BASE/$MAIN.bbl" "$REV/$MAIN.bbl" > "$REV/diff.bbl"
+    ) > /dev/null
+fi
 
 echo "Compiling the diff..."
 (
@@ -163,17 +173,18 @@ cd "$REV";
 $LATEX "$LTXARGS" diff.tex
 $LATEX "$LTXARGS" diff.tex
 $LATEX "$LTXARGS" diff.tex
-) > /dev/null 2>&1
+) > /dev/null
 
-if [[ -e "$REV/diff.pdf" ]] && [[ -s "$REV/diff.pdf" ]]; then
+if [[ -s "$REV/diff.pdf" ]]; then
 
     # Export diff pdf to the original document directory
     DESTPDF="$ROOT/diff-$BASEREF-$REVREF.pdf"
     mv "$REV/diff.pdf" "$DESTPDF" && \
         echo "Diff saved to:" && echo " -> $DESTPDF"
 
-    # Export diff aux file also, which could contain useful references
-    DESTAUX="$ROOT/diff.aux"
+    # Export diff aux file also, which could contain useful references (e.g.,
+    # for cross-referencing to other documents using the xr package)
+    DESTAUX="$ROOT/diff-$BASEREF-$REVREF.aux"
     mv "$REV/diff.aux" "$DESTAUX" && \
         echo "Aux saved to:" && echo " -> $DESTAUX"
 
