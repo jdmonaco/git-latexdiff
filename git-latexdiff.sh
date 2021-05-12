@@ -113,28 +113,28 @@ if [[ -n $(grep -Ewe '\\(include|input)' "$TEXPATH") ]]; then
 fi
 
 # Add file of safe commands that can be annotated
-SAFECMD="$ROOT/.append-safecmd"
+SAFECMD="$ROOT/$MAINPATH/.append-safecmd"
 if [[ -f "$SAFECMD" ]]; then
     echo "Found $SAFECMD"
     LDARGS="--append-safecmd=\"$SAFECMD\" $LDARGS"
 fi
 
 # Add file of safe commands that should not be annotated
-EXSAFECMD="$ROOT/.exclude-safecmd"
+EXSAFECMD="$ROOT/$MAINPATH/.exclude-safecmd"
 if [[ -f "$EXSAFECMD" ]]; then
     echo "Found $EXSAFECMD"
     LDARGS="--exclude-safecmd=\"$EXSAFECMD\" $LDARGS"
 fi
 
 # Add file of text commands whose last argument should be processed
-TEXTCMD="$ROOT/.append-textcmd"
+TEXTCMD="$ROOT/$MAINPATH/.append-textcmd"
 if [[ -f "$TEXTCMD" ]]; then
     echo "Found $TEXTCMD"
     LDARGS="--append-textcmd=\"$TEXTCMD\" $LDARGS"
 fi
 
 # Add file of text commands that should not be annotated
-EXTEXTCMD="$ROOT/.exclude-textcmd"
+EXTEXTCMD="$ROOT/$MAINPATH/.exclude-textcmd"
 if [[ -f "$EXTEXTCMD" ]]; then
     echo "Found $EXTEXTCMD"
     LDARGS="--exclude-textcmd=\"$EXTEXTCMD\" $LDARGS"
