@@ -244,14 +244,16 @@ $LATEX "$LTXARGS" diff.tex
 
 if [[ -s "$REV/diff.pdf" ]]; then
 
-    # Export diff pdf to the original document directory
-    DESTPDF="$ROOT/$MAINPATH/diff-$BASEREF-$REVREF.pdf"
+    # Export diff pdf to a diffs/ subfolder of the document directory
+    DIFFDIR="$ROOT/$MAINPATH/diffs"
+    [[ ! -d "$DIFFDIR" ]] && mkdir "$DIFFDIR"
+    DESTPDF="$DIFFDIR/diff-$BASEREF-$REVREF.pdf"
     mv "$REV/diff.pdf" "$DESTPDF" && \
         echo "Saved diff:" && echo " -> $DESTPDF"
 
     # Export diff aux file also, which could contain useful references (e.g.,
     # for cross-referencing to other documents using the xr package)
-    DESTAUX="$ROOT/$MAINPATH/diff-$BASEREF-$REVREF.aux"
+    DESTAUX="$DIFFDIR/diff-$BASEREF-$REVREF.aux"
     mv "$REV/diff.aux" "$DESTAUX" && \
         echo "Saved aux:" && echo " -> $DESTAUX"
 
