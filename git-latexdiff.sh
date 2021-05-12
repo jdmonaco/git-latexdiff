@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 #
-# Create LaTeX diffs from git revisions
+# Easily create LaTeX diffs from git revisions
 #
-# Requires: latexdiff, pdflatex (or xelatex), git, and rsync (for working copy
+# Requires: git, latexdiff, pdflatex (or xelatex), and rsync (for working copy
 # diffs).
 #
-# Notes: (1) Latexdiff is required, preferably version 1.0.1+ so that
-# included files are handled correctly. (2) The script will pick up on
-# .append-safecmd and .text-safecmd files in the main document folder to use for
-# the corresponding latexdiff options.
+# Notes: (1) The latexdiff script should be version 1.0.1+ so that included
+# files are handled correctly. (2) The script will pick up on .append-safecmd,
+# .exclude-safecmd, .append-textcmd, and .exclude-texcmd files in the main
+# document folder to use for the corresponding latexdiff options.
 #
-# Author: Joseph Monaco <jmonaco@jhu.edu> Last updated: December 28, 2019.
+# Author: Joseph Monaco <jmonaco@jhu.edu>
+# Last updated: May 12, 2021.
 #
 
 set -ue
