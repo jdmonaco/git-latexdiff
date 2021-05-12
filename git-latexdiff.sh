@@ -13,7 +13,7 @@
 # Author: Joseph Monaco <jmonaco@jhu.edu> Last updated: December 28, 2019.
 #
 
-set -xue
+set -ue
 NAME=$(basename "$0")
 
 function usage {
