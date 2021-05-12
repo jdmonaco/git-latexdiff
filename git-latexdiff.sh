@@ -13,17 +13,18 @@
 # Author: Joseph Monaco <jmonaco@jhu.edu> Last updated: December 28, 2019.
 #
 
-set -ue
+set -xue
 NAME=$(basename "$0")
 
 function usage {
 cat <<USAGE
-Usage: git-ldiff [-m <name>] [-x] [-o <opts>] [-b] <base> [-r <revision>]
+Usage: git-ldiff [-m <path>] [-p|-x] [-o <opts>] [-b] <base> [-r <revision>]
 
-Arguments:
--m,--main       main document name (default, 'main')
+Options:
+-m,--main       repository path to main document (default, 'main')
+-p,--pdflatex   use pdflatex (default)
 -x,--xelatex    use xelatex instead of pdflatex
--o,--options    addtional latexdiff arguments (--flatten is handled)
+-o,--options    additional latexdiff arguments (--flatten is handled)
 -b,--base       git commit reference for comparison point
 -r,--revision   revision commit (default, working copy)
 
@@ -31,12 +32,24 @@ Only the <base> commit reference is required.
 USAGE
 }
 
-# Assert latexdiff on path and running from repo root
-[[ -z $(which "latexdiff") ]] && echo "Requires latexdiff." && exit 1
-[[ -z $(which "git") ]] && echo "Requires git." && exit 2
-[[ ! -d ".git" ]] && echo "Run from repository root." && exit 3
+# Assert latexdiff and git are on the path
+[[ -z "$(which latexdiff)" ]] && echo "Error: Requires latexdiff." && \
+    usage && exit 1
+[[ -z "$(which git)" ]] && echo "Error: Requires git." && \
+    usage && exit 2
 
-MAIN="main"
+# Make sure we are running from a repository and change to root
+WDSTART="$(pwd)"
+while [[ ! -d ".git" ]]; do
+    if [[ "$(pwd)" == "/" ]] || [[ "$(pwd)" == "$HOME" ]]; then
+        echo "Error: Not in a repository: $WDSTART" && usage && exit 3
+    fi
+    cd ..;
+done
+ROOT="$(pwd)"
+echo "Found repository: $ROOT"
+
+DOCPATH="manuscript"
 LATEX="pdflatex"
 LTXARGS="-interaction=nonstopmode"
 BTXARGS="-terse"
@@ -49,10 +62,13 @@ while (( $# )); do
     if   [[ "$1" = "-h" ]] || [[ "$1" = "--help" ]]; then
         usage && exit 0
     elif [[ "$1" = "-m" ]] || [[ "$1" = "--main" ]]; then
-        MAIN="$2"
+        DOCPATH="$2"
         shift 2
     elif [[ "$1" = "-x" ]] || [[ "$1" = "--xelatex" ]]; then
         LATEX="xelatex"
+        shift
+    elif [[ "$1" = "-p" ]] || [[ "$1" = "--pdflatex" ]]; then
+        LATEX="pdflatex"
         shift
     elif [[ "$1" = "-o" ]] || [[ "$1" = "--options" ]]; then
         LDARGS="$LDARGS $2"
@@ -69,6 +85,19 @@ while (( $# )); do
     fi
 done
 
+# Process document path into components and verify main file exists
+DOCPATH="${DOCPATH%.*}"
+TEXPATH="$DOCPATH.tex"
+MAINBASE="${DOCPATH##*/}"
+MAINTEX="$MAINBASE.tex"
+MAINPATH="./"
+if [[ "$DOCPATH" == */* ]]; then
+    MAINPATH="${DOCPATH%/*}"
+fi
+if [[ ! -f "$TEXPATH" ]]; then
+    echo "Error: Missing main document: $TEXPATH" && usage && exit 3
+fi
+
 # Assert that the base commit was specified
 [[ -z "$BASEREF" ]] && usage && exit 0
 
@@ -78,16 +107,22 @@ done
     echo "Working copy diff requires rsync." && exit 5
 
 # Apply --flatten if documents uses \include or \input
-if [[ -n $(grep -Ewe '\\(include|input)' $MAIN.tex) ]]; then
+if [[ -n $(grep -Ewe '\\(include|input)' "$TEXPATH") ]]; then
     LDARGS="--flatten $LDARGS"
 fi
 
 # Add file of safe commands that can be annotated
-ROOT=$(pwd)
 SAFECMD="$ROOT/.append-safecmd"
 if [[ -f "$SAFECMD" ]]; then
     echo "Found $SAFECMD"
     LDARGS="--append-safecmd=\"$SAFECMD\" $LDARGS"
+fi
+
+# Add file of safe commands that should not be annotated
+EXSAFECMD="$ROOT/.exclude-safecmd"
+if [[ -f "$EXSAFECMD" ]]; then
+    echo "Found $EXSAFECMD"
+    LDARGS="--exclude-safecmd=\"$EXSAFECMD\" $LDARGS"
 fi
 
 # Add file of text commands whose last argument should be processed
@@ -95,6 +130,13 @@ TEXTCMD="$ROOT/.append-textcmd"
 if [[ -f "$TEXTCMD" ]]; then
     echo "Found $TEXTCMD"
     LDARGS="--append-textcmd=\"$TEXTCMD\" $LDARGS"
+fi
+
+# Add file of text commands that should not be annotated
+EXTEXTCMD="$ROOT/.exclude-textcmd"
+if [[ -f "$EXTEXTCMD" ]]; then
+    echo "Found $EXTEXTCMD"
+    LDARGS="--exclude-textcmd=\"$EXTEXTCMD\" $LDARGS"
 fi
 
 # Make the temporary directories
@@ -111,25 +153,31 @@ cd "$BASE"
 git checkout "$BASEREF"
 ) > /dev/null 2>&1
 
+# Update base to include path to main latex docs
+if [[ "$MAINPATH" != "./" ]]; then
+    BASE="$BASE/$MAINPATH"
+fi
+
 # Compile bibtex for bbl file in base if necessary
-if grep '^\w*\\begin{thebibliography}' "$BASE/$MAIN.tex" > /dev/null 2>&1; then
+if grep '^\w*\\begin{thebibliography}' "$BASE/$MAINTEX" > /dev/null 2>&1; then
     echo "Found embedded bibliography..."
-elif grep '^\w*\\bibliography{' "$BASE/$MAIN.tex" > /dev/null 2>&1; then
+elif grep '\\cite' "$BASE/$MAINTEX" > /dev/null 2>&1; then
     echo "Compiling base bibtex..."
-    echo " -> $BASE/$MAIN.bbl"
+    echo " -> $BASE/$MAINBASE.bbl"
     (
     cd "$BASE"
-    $LATEX "$LTXARGS" $MAIN.tex
-    bibtex "$BTXARGS" $MAIN
+    $LATEX "$LTXARGS" $MAINTEX
+    bibtex "$BTXARGS" $MAINBASE
     ) > /dev/null
 fi
 
 # Checkout revised commit (or rsync working copy)
-if [[ "$REVREF" = "WC" ]]; then
+if [[ "$REVREF" == "WC" ]]; then
     echo "Copying working copy..."
     echo " -> $REV"
     mkdir -p "$REV" && \
-        rsync -avhi --exclude=".git*" "$ROOT/" "$REV" > /dev/null 2>&1
+        rsync -avhi --exclude="build/" --exclude=".git*" \
+            "$ROOT/" "$REV" > /dev/null
 else
     echo "Cloning revision commit..."
     echo " -> $REV"
@@ -140,30 +188,36 @@ else
     ) > /dev/null 2>&1
 fi
 
+# Update revision to include path to main latex docs
+if [[ "$MAINPATH" != "./" ]]; then
+    REV="$REV/$MAINPATH"
+fi
+
 # Compile bibtex for bbl file in revision if necessary
-if grep '^\w*\\begin{thebibliography}' "$REV/$MAIN.tex" > /dev/null 2>&1; then
+if grep '^\w*\\begin{thebibliography}' "$REV/$MAINTEX" > /dev/null 2>&1; then
     echo "Found embedded bibliography..."
-elif grep '^\w*\\bibliography{' "$REV/$MAIN.tex" > /dev/null 2>&1; then
+elif grep '\\cite' "$REV/$MAINTEX" > /dev/null 2>&1; then
     echo "Compiling revision bibtex..."
-    echo " -> $REV/$MAIN.bbl"
+    echo " -> $REV/$MAINBASE.bbl"
     (
     cd "$REV"
-    $LATEX "$LTXARGS" $MAIN.tex
-    bibtex "$BTXARGS" $MAIN
+    $LATEX "$LTXARGS" $MAINTEX
+    bibtex "$BTXARGS" $MAINBASE
     ) > /dev/null
 fi
 
 echo "Running latexdiff (tex)..."
 (
 cd "$TMP"
-latexdiff $LDARGS "$BASE/$MAIN.tex" "$REV/$MAIN.tex" > "$REV/diff.tex"
+latexdiff $LDARGS "$BASE/$MAINTEX" "$REV/$MAINTEX" > "$REV/diff.tex"
 ) > /dev/null
 
-if [[ -f "$BASE/$MAIN.bbl" ]] && [[ -f "$REV/$MAIN.bbl" ]]; then
+if [[ -f "$BASE/$MAINBASE.bbl" ]] && [[ -f "$REV/$MAINBASE.bbl" ]]; then
     echo "Running latexdiff (bbl)..."
     (
     cd "$TMP"
-    latexdiff $LDARGS "$BASE/$MAIN.bbl" "$REV/$MAIN.bbl" > "$REV/diff.bbl"
+    latexdiff $LDARGS "$BASE/$MAINBASE.bbl" "$REV/$MAINBASE.bbl" \
+        > "$REV/diff.bbl"
     ) > /dev/null
 fi
 
@@ -178,15 +232,15 @@ $LATEX "$LTXARGS" diff.tex
 if [[ -s "$REV/diff.pdf" ]]; then
 
     # Export diff pdf to the original document directory
-    DESTPDF="$ROOT/diff-$BASEREF-$REVREF.pdf"
+    DESTPDF="$ROOT/$MAINPATH/diff-$BASEREF-$REVREF.pdf"
     mv "$REV/diff.pdf" "$DESTPDF" && \
-        echo "Diff saved to:" && echo " -> $DESTPDF"
+        echo "Saved diff:" && echo " -> $DESTPDF"
 
     # Export diff aux file also, which could contain useful references (e.g.,
     # for cross-referencing to other documents using the xr package)
-    DESTAUX="$ROOT/diff-$BASEREF-$REVREF.aux"
+    DESTAUX="$ROOT/$MAINPATH/diff-$BASEREF-$REVREF.aux"
     mv "$REV/diff.aux" "$DESTAUX" && \
-        echo "Aux saved to:" && echo " -> $DESTAUX"
+        echo "Saved aux:" && echo " -> $DESTAUX"
 
     [[ $(which "open") ]] && open "$DESTPDF"
     rm -rf "$TMP" > /dev/null 2>&1

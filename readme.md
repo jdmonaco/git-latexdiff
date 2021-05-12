@@ -11,12 +11,13 @@ PDF back to the document's directory. To install, create a symbolic link to
 `git-latexdiff.sh` called `git-ldiff` (or whatever you prefer) somewhere on your
 `$PATH`.
 
-    Usage: git-ldiff [-m <name>] [-x] [-o <opts>] [-b] <base> [-r <revision>]
+    Usage: git-ldiff [-m <path>] [-p|-x] [-o <opts>] [-b] <base> [-r <revision>]
 
-    Arguments:
-    -m,--main       main document name (default, 'main')
+    Options:
+    -m,--main       repository path to main document (default, 'main')
+    -p,--pdflatex   use pdflatex (default)
     -x,--xelatex    use xelatex instead of pdflatex
-    -o,--options    addtional latexdiff arguments (--flatten is handled)
+    -o,--options    additional latexdiff arguments (--flatten is handled)
     -b,--base       git commit reference for comparison point
     -r,--revision   revision commit (default, working copy)
 
@@ -25,13 +26,15 @@ PDF back to the document's directory. To install, create a symbolic link to
 The base and revision values can be git references of any sort (tags, branches,
 commit hashes, etc.) that are accepted by `git checkout`.
 
-Notes:
+### Script notes
 
 - The script passes the option `--append-safecmd=$ROOT/.append-safecmd` if you
 have a file called `.append-safecmd` in the document's directory; see `man
-latexdiff` for more about safe commands.
+latexdiff` for more about safe commands. 
 - It will similarly pass `--append-textcmd=$ROOT/.append-textcmd` if there is a
 `.append-textcmd` file.
+- The `append` files above also have corresponding `exclude` files that may be
+specified.
 - If you have `\include` or `\input` commands to bring in
 other files, the script will use the `--flatten` option,
 meaning that you will also need `latexdiff` version 1.0.1+
