@@ -22,7 +22,7 @@ cat <<USAGE
 Usage: git-ldiff [-m <path>] [-p|-x] [-o <opts>] [-b] <base> [-r <revision>]
 
 Options:
--m,--main       repository path to main document (default, 'main')
+-m,--main       repository path to main document (default, 'manuscript')
 -p,--pdflatex   use pdflatex (default)
 -x,--xelatex    use xelatex instead of pdflatex
 -o,--options    additional latexdiff arguments (--flatten is handled)
