@@ -96,16 +96,28 @@ if [[ "$DOCPATH" == */* ]]; then
     MAINPATH="${DOCPATH%/*}"
 fi
 if [[ ! -f "$TEXPATH" ]]; then
-    echo "Error: Missing main document: $TEXPATH" && usage && exit 3
+    echo "Error: Missing main document: $TEXPATH" && usage && exit 4
 fi
 
 # Assert that the base commit was specified
-[[ -z "$BASEREF" ]] && usage && exit 0
+[[ -z "$BASEREF" ]] && echo "Error: Missing base reference." && usage && exit 5
+
+# Check for XeLaTeX commands or directives
+if [[ "$LATEX" == "pdflatex" ]]; then
+    if [[ "$(head -1 $TEXPATH)" == *xelatex* ]]; then
+        echo "Warning: Forcing xelatex because of program directive"
+        LATEX="xelatex"
+    elif grep -E '\\(setmainfont|setmathsfont|fontspec)' "$TEXPATH" \
+            > /dev/null 2>&1; then
+        echo "Warning: Forcing xelatex because of font commands"
+        LATEX="xelatex"
+    fi
+fi
 
 # Assert *latex and rsync (if needed) are on path
-[[ -z $(which "$LATEX") ]] && echo "Unable to find $LATEX." && exit 4
+[[ -z $(which "$LATEX") ]] && echo "Unable to find $LATEX." && exit 6
 [[ "$REVREF" = "WC" ]] && [[ -z $(which "rsync") ]] && \
-    echo "Working copy diff requires rsync." && exit 5
+    echo "Working copy diff requires rsync." && exit 7
 
 # Apply --flatten if documents uses \include or \input
 if [[ -n $(grep -Ewe '\\(include|input)' "$TEXPATH") ]]; then
@@ -248,5 +260,5 @@ if [[ -s "$REV/diff.pdf" ]]; then
 
 else
     echo 'Something went wrong! PDF file not produced.'
-    exit 6
+    exit 8
 fi

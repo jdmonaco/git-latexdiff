@@ -28,6 +28,9 @@ commit hashes, etc.) that are accepted by `git checkout`.
 
 ### Script notes
 
+- If `pdflatex` is selected but a `xelatex` document is detected (based on a
+program directive or the presence of `xelatex`-specific font commands), then a
+warning is issued and `xelatex` compilation is forced.
 - The script passes the option `--append-safecmd=$ROOT/.append-safecmd` if you
 have a file called `.append-safecmd` in the document's directory; see `man
 latexdiff` for more about safe commands. 
